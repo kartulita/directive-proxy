@@ -4,6 +4,39 @@
 	angular.module('battlesnake.directive-proxy')
 		.factory('directiveProxyService', directiveProxyService);
 
+	/**
+	 * @ngdoc service
+	 * @name directiveProxyService
+	 *
+	 * @param target {string}
+	 * Name of directive to proxy to (can be un-normalized)
+	 *
+	 * @param attrActions {array|object}
+	 * Actions to apply to attributes of the host element.  If this is an array
+	 * of attribute names it is equivalent to an object where each key is an
+	 * attribute name and each value is "leave".
+	 *
+	 * Possible actions are:
+	 *
+	 *  * leave - leave the attribute on the host element
+	 *  * copy - copy the attribute to the target element
+	 *  * remove - remove the attribute from the host element
+	 *  * move - move the attribute to the target element
+	 *  * =value - set the attribute on the target element to "value"
+	 *
+	 * @param scope {scope}
+	 * The angular scope to compile the target element in
+	 *
+	 * @param element {element}
+	 * The host element.  To replace the host element with the target, set
+	 * `replace: true` in the host element's directive definition.
+	 *
+	 * @param attrs {attrs}
+	 * Attributes of the host element
+	 *
+	 * @return {element}
+	 * The compiled target element (already appended to the host element)
+	 */
 	function directiveProxyService($compile, $injector) {
 
 		proxy.generateDirective = generateDirective;
