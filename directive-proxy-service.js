@@ -23,6 +23,8 @@
 	 *  * remove - remove the attribute from the host element
 	 *  * move - move the attribute to the target element
 	 *  * =value - set the attribute on the target element to "value"
+	 *  * @attr - set the attribute on the target element to the value of
+	 *    attribute attr on the source element
 	 *
 	 * @param scope {scope}
 	 * The angular scope to compile the target element in
@@ -81,14 +83,34 @@
 				.each(function (val, key) {
 					var action = _(attrActions).has(key) ? attrActions[key] : 'move';
 					var attr = _(attrs.$attr).has(key) ? attrs.$attr[key] : key;
+					var valid = false;
+					if (action === 'leave') {
+						valid = true;
+					}
 					if (action === 'remove' || action === 'move') {
 						element.removeAttr(attr);
+						valid = true;
 					}
 					if (action === 'copy' || action === 'move') {
 						forward.attr(attr, val);
+						valid = true;
 					}
 					if (action.charAt(0) === '=') {
 						forward.attr(attr, action.substr(1));
+						valid = true;
+					}
+					if (action.charAt(0) === '@') {
+						var attr = action.substr(1);
+						var value = _(attrs).has(attr) ? attrs[attr] :
+							_(attrs.$attr).has(attr) ? attrs[attrs.$attr[attr]] :
+							null;
+						if (value !== null) {
+							forward.attr(attr, value);
+						}
+						valid = true;
+					}
+					if (!valid) {
+						throw new Error('Unknown attribute action: ' + action);
 					}
 				});
 			/* Compile */
@@ -101,7 +123,8 @@
 		/* Generates a proxy directive to be returned by a directive */
 		function generateDirective(tag, link, require) {
 			return {
-				restrict: 'E',
+				/* Allow as attribute for shitty Microsoft browsers */
+				restrict: 'EA',
 				require: require,
 				terminal: true,
 				priority: 1000000,
