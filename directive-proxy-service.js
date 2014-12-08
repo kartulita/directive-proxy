@@ -8,56 +8,30 @@
 	 * @ngdoc service
 	 * @name directiveProxyService
 	 *
-	 * @param target {string}
-	 * Name of directive to proxy to (can be un-normalized)
+	 * @param {string} tagFactory
+	 * Name of HTML tag for new element or a function(attrs, meta) which
+	 * returns the name of the HTML tag.
 	 *
-	 * @param scope {scope}
-	 * The angular scope to compile the target element in
+	 * @param {array} leave
+	 * Array of names of attributes to leave on the parent element
 	 *
-	 * @param element {element}
-	 * The host element.  To replace the host element with the target, set
-	 * `replace: true` in the host element's directive definition.
+	 * @param {function} link
+	 * A function(scope, element, attrs, meta) which links the new element,
+	 * and optionally returns the name of a directive which should be proxied
+	 * to (can be un-normalized).
 	 *
-	 * @return {element}
-	 * The compiled target element (already appended to the host element)
+	 * @return {directive}
+	 * A directive definition which may be returned by a directive function.
+	 *
 	 */
 	function directiveProxyService($compile, $injector, attributeTransferService, getDirectiveService) {
 
-		proxy.generateDirective = generateDirective;
-		proxy.generateAlias = generateAlias;
+		generateDirective.alias = generateAlias;
 
-		return proxy;
-
-		function proxyAttributes(source, attrs, target) {
-			attributeTransferService.moveControllers(source, attrs, target);
-			attributeTransferService(source, attrs, target,
-				{
-					id: 'leave',
-					'class': 'leave'
-				},
-				'move');
-		}
-
-		function proxy(target, scope, element, attrs) {
-			/* Ensure target exists (dependency check) */
-			try {
-				getDirectiveService(target);
-			} catch (e) {
-				console.error('Target directive not found or could not be injected: ' + target);
-				throw e;
-			}
-			/* Create new element */
-			var newElement = angular.element('<' + target + '/>');
-			proxyAttributes(element, attrs, newElement);
-			/* Compile */
-			$compile(newElement)(scope);
-			/* Append to parent */
-			element.append(newElement);
-			return newElement;
-		}
+		return generateDirective;
 
 		/* Generates a proxy directive to be returned by a directive */
-		function generateDirective(tagFactory, link) {
+		function generateDirective(tagFactory, leave, link) {
 			return {
 				/* Allow as attribute for shitty Microsoft browsers */
 				restrict: 'EA',
@@ -82,9 +56,8 @@
 						.append('<!-- ' + originalTag + '-->')
 						.append(newElement);
 					return function (scope, element, attrs) {
-						if (link) {
-							link(scope, newElement, attrs, meta);
-						}
+						var target = link(scope, newElement, attrs, meta);
+						proxy(target, scope, newElement, attrs, leave || []);
 					};
 				}
 			};
@@ -92,11 +65,44 @@
 
 		/* Generate an alias directive, within the given container */
 		function generateAlias(tag, target) {
-			return directiveProxyService.generateDirective(
+			return generateDirective(
 				tag,
+				[],
 				function link(scope, element, attrs) {
-					directiveProxyService(target, scope, element);
+					proxy(target, scope, element, []);
 				});
+		}
+
+		/*
+		 * Move controllers to target element, move attributes not listed in the
+		 * `leave` array to the target element
+		 */
+		function proxyAttributes(source, attrs, target, leave) {
+			attributeTransferService.moveControllers(source, attrs, target);
+			var actions = _(leave)
+				.reduce(function (memo, item) {
+					memo[item] = 'leave';
+					return memo;
+				}, {});
+			attributeTransferService(source, attrs, target, actions, 'move');
+		}
+
+		function proxy(target, scope, element, attrs, leave) {
+			/* Ensure target exists (dependency check) */
+			try {
+				getDirectiveService(target);
+			} catch (e) {
+				console.error('Target directive not found or could not be injected: ' + target);
+				throw e;
+			}
+			/* Create new element */
+			var newElement = angular.element('<' + target + '/>');
+			proxyAttributes(element, attrs, newElement, leave);
+			/* Compile */
+			$compile(newElement)(scope);
+			/* Append to parent */
+			element.append(newElement);
+			return newElement;
 		}
 
 	}
