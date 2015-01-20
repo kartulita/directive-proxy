@@ -3,8 +3,7 @@
 
 	/**
 	 * @ngdoc module
-	 * @module battlesnake.directive-proxy
-	 * @requires {@link http://underscorejs.org|Underscore}
+	 * @module directive-proxy
 	 *
 	 * @description
 	 * Exposes a service which can be used to construct proxy directives and
